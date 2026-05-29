@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">رياضيات</string>
+    <string name="home">الرئيسية</string>
+    <string name="calculator">الحاسبة</string>
+    <string name="graph">الرسم البياني</string>
+    <string name="lessons">الدروس</string>
+    <string name="exercises">التمارين</string>
+    <string name="progress">تقدمي</string>
+    <string name="settings">الإعدادات</string>
+    <string name="welcome">مرحباً بك في رياضيات</string>
+    <string name="daily_quote">مسألة اليوم</string>
+    <string name="start_learning">ابدأ التعلم</string>
+</resources>
