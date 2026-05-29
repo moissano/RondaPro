@@ -1,6 +1,7 @@
 package com.apps.ronda.pro
 
 import android.graphics.Color
+import com.apps.ronda.pro.R
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.FrameLayout
