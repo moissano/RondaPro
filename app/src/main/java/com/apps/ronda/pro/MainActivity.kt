@@ -59,13 +59,12 @@ class MainActivity : AppCompatActivity() {
         for (card in gameManager.player1.hand) {
             val cardView = createCardView(card, isFaceUp = true)
             
-                        // إضافة خاصية اللمس لرمي الورقة
+            // إضافة خاصية اللمس لرمي الورقة
             cardView.setOnClickListener {
                 // 1. اللاعب (أنت) ترمي ورقتك
                 gameManager.playCardToTable(gameManager.player1, card)
-                // (ملاحظة: لقد حذفنا سطر player1.hand.remove لأن GameManager أصبح يقوم بها تلقائياً)
                 
-                // 2. البوتات (الخصوم) يرمون أوراقهم فوراً للرد عليك (لعب عشوائي مؤقت)
+                // 2. البوتات (الخصوم) يرمون أوراقهم فوراً للرد عليك
                 if (gameManager.player2.hand.isNotEmpty()) {
                     gameManager.playCardToTable(gameManager.player2, gameManager.player2.hand[0])
                 }
@@ -76,24 +75,19 @@ class MainActivity : AppCompatActivity() {
                     gameManager.playCardToTable(gameManager.player4, gameManager.player4.hand[0])
                 }
                 
-                // 3. تحديث الشاشة لترى الأوراق الجديدة على الطاولة
+                // 3. تحديث الشاشة
                 updateUI()
-            }
-                
-                // هنا مستقبلاً سنجعل البوت يرد عليك!
             }
             playerHandLayout.addView(cardView)
         }
 
         // 5. رسم أوراق الطاولة (الطبسيل)
-        // سنقوم بتوزيعها برمجياً بشكل عشوائي قليلاً لتبدو مرمية على الطاولة
-        for ((index, card) in gameManager.tableCards.withIndex()) {
-            val cardView = createCardView(card, isFaceUp = true)
+        for ((index, tableCard) in gameManager.tableCards.withIndex()) {
+            val cardView = createCardView(tableCard, isFaceUp = true)
             
             // إعدادات وضع الورقة في الطبسيل (FrameLayout)
             val params = FrameLayout.LayoutParams(160, 240)
             params.gravity = Gravity.CENTER
-            // إزاحة بسيطة لكي لا تتطابق الأوراق فوق بعضها تماماً
             params.leftMargin = (index * 40) - 60 
             cardView.layoutParams = params
             
