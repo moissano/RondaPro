@@ -2,3 +2,4 @@
 build/
 app/build/
 local.properties
+openjdk-17_linux-aarch64_bin.tar.gz
