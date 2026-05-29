@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.riyadhiyat.app"
+    namespace = "com.apps.ronda.pro"
     compileSdk = 35
 
     defaultConfig {
