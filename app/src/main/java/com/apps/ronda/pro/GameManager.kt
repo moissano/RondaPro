@@ -23,6 +23,9 @@ class GameManager {
     var lastPlayedValue = -1
     var strikeStreak = 0
 
+    // نظام توزيع الروندة الأصلي
+    var isFirstDeal = true // لتحديد هل نحن في التفريقة الأولى (4 أوراق) أم المعاودات (3 أوراق)
+
     // المؤقت
     private var turnTimer: CountDownTimer? = null
     private val TURN_DURATION = 30000L // 30 ثانية
@@ -57,25 +60,62 @@ class GameManager {
         players.forEach { it.resetPlayer() }
         strikeStreak = 0
         lastPlayedValue = -1
+        isFirstDeal = true // إعادة ضبط التوزيعة لتكون الأولى
 
-        // توزيع 4 أوراق في الطاولة أولاً
+        // 1. وضع 4 أوراق في الطاولة أولاً
         for (i in 0 until 4) {
             deck.drawCard()?.let { tableCards.add(it) }
         }
+        
+        // 2. توزيع أول 4 أوراق لكل لاعب (التفريقة الأولى: 16 ورقة)
         dealCardsToPlayers()
     }
 
     fun dealCardsToPlayers(): Boolean {
-        if (deck.getRemainingCardsCount() >= players.size * 3) {
+        val remainingCards = deck.getRemainingCardsCount()
+        
+        // إذا كان هذا التوزيع الأول، نوزع 4 أوراق لكل لاعب
+        if (isFirstDeal && remainingCards >= players.size * 4) {
+            for (i in 0 until 4) {
+                players.forEach { player ->
+                    deck.drawCard()?.let { player.receiveCard(it) }
+                }
+            }
+            isFirstDeal = false // التوزيعات القادمة ستكون معاودات (3 أوراق)
+            detectSecretMatches()
+            return true
+        } 
+        // إذا كانت "معاودة"، نوزع 3 أوراق لكل لاعب
+        else if (!isFirstDeal && remainingCards >= players.size * 3) {
             for (i in 0 until 3) {
                 players.forEach { player ->
                     deck.drawCard()?.let { player.receiveCard(it) }
                 }
             }
-            detectSecretMatches() // كشف الروندة سراً بعد التوزيع مباشرة
+            detectSecretMatches()
             return true
         }
+        
+        // إذا لم يتبقَ أوراق في الكارطة
         return false
+    }
+
+    // دالة مهمة يتم استدعاؤها بعدما يرمي كل لاعب ورقته
+    // لتتحقق هل انتهت أوراق اليد لجميع اللاعبين لتبدأ "المعاودة" تلقائياً
+    fun checkAndTriggerNextDeal() {
+        val allHandsEmpty = players.all { it.hand.isEmpty() }
+        
+        if (allHandsEmpty) {
+            val hasMoreCards = dealCardsToPlayers()
+            if (hasMoreCards) {
+                println("تمت المعاودة وتوزيع أوراق جديدة تلقائياً!")
+                // هنا نقوم بتحديث الواجهة (UI) في مشروعك ليرى اللاعب أوراقه الجديدة
+            } else {
+                println("انتهت الكارطة بالكامل! حان وقت حساب النقاط ونهاية الطرح.")
+                executeKhalas()
+                moveToNextDealer()
+            }
+        }
     }
 
     fun moveToNextDealer() {
@@ -91,7 +131,6 @@ class GameManager {
         turnTimer?.cancel()
         turnTimer = object : CountDownTimer(TURN_DURATION, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                val secondsLeft = millisUntilFinished / 1000
                 // سيتم التحديث في الواجهة لاحقاً
             }
             override fun onFinish() {
@@ -108,6 +147,7 @@ class GameManager {
 
     fun playCardToTable(player: Player, card: Card) {
         turnTimer?.cancel() // إيقاف الوقت لأن اللاعب رمى الورقة
+        player.hand.remove(card) // إزالة الورقة الملعوبة من يد اللاعب يدوياً
         
         val playerIndex = players.indexOf(player)
         val currentTeam = if (playerIndex == 0 || playerIndex == 2) 1 else 2
@@ -121,8 +161,7 @@ class GameManager {
                 2 -> { addScore(opposingTeam, -1); addScore(currentTeam, 5) } // حبل
                 3 -> { addScore(opposingTeam, -5); addScore(currentTeam, 10) } // جوج حبال
             }
-            // منطق الأكل يتم تفصيله لاحقاً بناءً على الأوراق المطابقة
-            val captured = listOf(card) // افتراضياً يأكل الورقة المطابقة
+            val captured = listOf(card) 
             handleCapture(player, currentTeam, captured)
             
         } else {
@@ -130,6 +169,9 @@ class GameManager {
             lastPlayedValue = card.value
             tableCards.add(card) // تبقى في الطاولة
         }
+
+        // فحص هل يجب توزيع أوراق جديدة بعد هذه الرمية
+        checkAndTriggerNextDeal()
     }
 
     private fun handleCapture(player: Player, team: Int, capturedCardsList: List<Card>) {
@@ -155,12 +197,18 @@ class GameManager {
 
     private fun checkHandMatch(hand: List<Card>): Pair<Int, Int> {
         if (hand.size < 3) return Pair(0, 0)
-        val v1 = hand[0].value; val v2 = hand[1].value; val v3 = hand[2].value
-
-        if (v1 == v2 && v2 == v3) return Pair(2, v1) // ترينكة
-        if (v1 == v2) return Pair(1, v1) // روندة
-        if (v2 == v3) return Pair(1, v2)
-        if (v1 == v3) return Pair(1, v1)
+        
+        // حساب التكرارات للأوراق الموجودة باليد
+        val valueCounts = hand.groupBy { it.value }.mapValues { it.value.size }
+        
+        // إذا كانت هناك 3 أو 4 أوراق متشابهة (ترينكة)
+        val triple = valueCounts.filter { it.value >= 3 }.keys.firstOrNull()
+        if (triple != null) return Pair(2, triple)
+        
+        // إذا كانت هناك ورقتان متشابهتان (روندة)
+        val pair = valueCounts.filter { it.value == 2 }.keys.firstOrNull()
+        if (pair != null) return Pair(1, pair)
+        
         return Pair(0, 0)
     }
 
@@ -175,8 +223,6 @@ class GameManager {
     }
 
     fun executeKhalas() {
-        // يتم حساب الخلاص في نهاية الطرح بين الفرق هنا
-        // (سيتم ربطها بدقة عند معالجة أدوار اللعب الجماعي)
         println("حساب الخلاص للروندات المُعلنة...")
     }
 }

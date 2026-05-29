@@ -59,15 +59,26 @@ class MainActivity : AppCompatActivity() {
         for (card in gameManager.player1.hand) {
             val cardView = createCardView(card, isFaceUp = true)
             
-            // إضافة خاصية اللمس لرمي الورقة
+                        // إضافة خاصية اللمس لرمي الورقة
             cardView.setOnClickListener {
-                // رمي الورقة إلى الطاولة
+                // 1. اللاعب (أنت) ترمي ورقتك
                 gameManager.playCardToTable(gameManager.player1, card)
-                // سحب الورقة من يد اللاعب
-                gameManager.player1.hand.remove(card)
+                // (ملاحظة: لقد حذفنا سطر player1.hand.remove لأن GameManager أصبح يقوم بها تلقائياً)
                 
-                // تحديث الشاشة بعد الرمي
+                // 2. البوتات (الخصوم) يرمون أوراقهم فوراً للرد عليك (لعب عشوائي مؤقت)
+                if (gameManager.player2.hand.isNotEmpty()) {
+                    gameManager.playCardToTable(gameManager.player2, gameManager.player2.hand[0])
+                }
+                if (gameManager.player3.hand.isNotEmpty()) {
+                    gameManager.playCardToTable(gameManager.player3, gameManager.player3.hand[0])
+                }
+                if (gameManager.player4.hand.isNotEmpty()) {
+                    gameManager.playCardToTable(gameManager.player4, gameManager.player4.hand[0])
+                }
+                
+                // 3. تحديث الشاشة لترى الأوراق الجديدة على الطاولة
                 updateUI()
+            }
                 
                 // هنا مستقبلاً سنجعل البوت يرد عليك!
             }
